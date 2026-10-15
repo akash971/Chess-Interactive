@@ -9,12 +9,18 @@ const piecesJs = fs.readFileSync('js/pieces.js', 'utf8');
 const curriculumJs = fs.readFileSync('js/curriculum.js', 'utf8');
 const engineJs = fs.readFileSync('js/engine.js', 'utf8');
 const boardJs = fs.readFileSync('js/board.js', 'utf8');
+const configJs = fs.readFileSync('js/config.js', 'utf8');
+const coachJs = fs.readFileSync('js/coach.js', 'utf8');
 const appJs = fs.readFileSync('js/app.js', 'utf8');
 
 let bundle = indexHtml;
 
 // Replace external script tags with inlined scripts
 const scriptsBlock = `
+  <script>
+    // --- Inlined config.js ---
+    ${configJs}
+  </script>
   <script>
     // --- Inlined chess.min.js ---
     ${chessMinJs}
@@ -36,6 +42,10 @@ const scriptsBlock = `
     ${engineJs}
   </script>
   <script>
+    // --- Inlined coach.js ---
+    ${coachJs}
+  </script>
+  <script>
     // --- Inlined board.js ---
     ${boardJs}
   </script>
@@ -45,7 +55,7 @@ const scriptsBlock = `
   </script>
 `;
 
-bundle = bundle.replace(/<!-- Scripts -->[\s\S]*?<\/body>/, `${scriptsBlock}\n</body>`);
+bundle = bundle.replace(/<!-- Scripts -->[\s\S]*?<\/body>/, `<!-- Scripts -->\n${scriptsBlock}\n</body>`);
 
 fs.writeFileSync('standalone.html', bundle);
 console.log('Successfully created standalone.html!');
