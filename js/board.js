@@ -215,7 +215,7 @@ class ChessBoardUI {
     }
   }
 
-  // Drag and drop support
+  // Drag and drop & touch support optimized for iOS 15 / iPhone
   attachDragListeners(squareEl, sqName) {
     squareEl.addEventListener('mousedown', (e) => this.onDragStart(e, sqName));
     squareEl.addEventListener('touchstart', (e) => this.onDragStart(e, sqName), { passive: false });
@@ -223,24 +223,27 @@ class ChessBoardUI {
 
   onDragStart(e, sqName) {
     if (!this.options.interactive) return;
+
+    const isTouch = Boolean(e.touches);
+    const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+    const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+
+    this.dragOriginSquare = sqName;
+    this.touchStartX = clientX;
+    this.touchStartY = clientY;
+    this.isTouchDragging = false;
+    this.canDragCurrentPiece = false;
+
     const piece = this.chess.get(sqName);
-    if (!piece) return;
-    if (this.options.playerColor && piece.color !== this.options.playerColor && this.options.playerColor !== 'both') return;
-    if (piece.color !== this.chess.turn()) return;
 
-    this.draggedSquare = sqName;
-    this.selectSquare(sqName);
-
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-    const pieceSvg = window.ChessPieces.getSvg(piece.type, piece.color);
-    this.dragGhost = document.createElement('div');
-    this.dragGhost.className = 'fixed pointer-events-none z-50 w-16 h-16 transform -translate-x-1/2 -translate-y-1/2 drop-shadow-2xl scale-110';
-    this.dragGhost.innerHTML = pieceSvg;
-    this.dragGhost.style.left = `${clientX}px`;
-    this.dragGhost.style.top = `${clientY}px`;
-    document.body.appendChild(this.dragGhost);
+    // Verify piece belongs to active turn and player color
+    if (piece && piece.color === this.chess.turn()) {
+      if (!this.options.playerColor || this.options.playerColor === 'both' || piece.color === this.options.playerColor) {
+        this.canDragCurrentPiece = true;
+        this.draggedSquare = sqName;
+        this.draggedPiece = piece;
+      }
+    }
 
     this.onDragMoveBind = (evt) => this.onDragMove(evt);
     this.onDragEndBind = (evt) => this.onDragEnd(evt);
@@ -248,23 +251,46 @@ class ChessBoardUI {
     document.addEventListener('mousemove', this.onDragMoveBind);
     document.addEventListener('mouseup', this.onDragEndBind);
     document.addEventListener('touchmove', this.onDragMoveBind, { passive: false });
-    document.addEventListener('touchend', this.onDragEndBind);
+    document.addEventListener('touchend', this.onDragEndBind, { passive: false });
   }
 
   onDragMove(e) {
-    if (!this.dragGhost) return;
-    if (e.preventDefault && e.cancelable) e.preventDefault();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    this.dragGhost.style.left = `${clientX}px`;
-    this.dragGhost.style.top = `${clientY}px`;
+    const isTouch = Boolean(e.touches);
+    const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+    const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+
+    const dx = Math.abs(clientX - this.touchStartX);
+    const dy = Math.abs(clientY - this.touchStartY);
+
+    // Only initiate drag ghost after moving past threshold (preserves clean taps)
+    if ((dx > 6 || dy > 6) && this.canDragCurrentPiece) {
+      if (!this.isTouchDragging) {
+        this.isTouchDragging = true;
+        this.selectSquare(this.dragOriginSquare);
+
+        const pieceSvg = window.ChessPieces.getSvg(this.draggedPiece.type, this.draggedPiece.color);
+        this.dragGhost = document.createElement('div');
+        this.dragGhost.className = 'drag-ghost fixed pointer-events-none z-50 w-16 h-16 drop-shadow-2xl scale-110';
+        this.dragGhost.innerHTML = pieceSvg;
+        document.body.appendChild(this.dragGhost);
+      }
+    }
+
+    if (this.dragGhost) {
+      if (e.cancelable) e.preventDefault();
+      this.dragGhost.style.left = `${clientX}px`;
+      this.dragGhost.style.top = `${clientY}px`;
+    }
   }
 
   onDragEnd(e) {
     if (this.dragGhost) {
-      document.body.removeChild(this.dragGhost);
+      if (this.dragGhost.parentNode) {
+        this.dragGhost.parentNode.removeChild(this.dragGhost);
+      }
       this.dragGhost = null;
     }
+
     document.removeEventListener('mousemove', this.onDragMoveBind);
     document.removeEventListener('mouseup', this.onDragEndBind);
     document.removeEventListener('touchmove', this.onDragMoveBind);
@@ -273,15 +299,29 @@ class ChessBoardUI {
     const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
     const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
 
-    const targetEl = document.elementFromPoint(clientX, clientY);
-    if (!targetEl) return;
-    const squareContainer = targetEl.closest('[data-square]');
-    if (squareContainer && squareContainer.dataset.square) {
-      const targetSquare = squareContainer.dataset.square;
-      if (targetSquare !== this.draggedSquare) {
-        this.attemptMove(this.draggedSquare, targetSquare);
+    if (this.isTouchDragging && this.canDragCurrentPiece) {
+      // Complete drag-and-drop move
+      const targetEl = document.elementFromPoint(clientX, clientY);
+      if (targetEl) {
+        const squareContainer = targetEl.closest('[data-square]');
+        if (squareContainer && squareContainer.dataset.square) {
+          const targetSquare = squareContainer.dataset.square;
+          if (targetSquare !== this.dragOriginSquare) {
+            this.attemptMove(this.dragOriginSquare, targetSquare);
+            return;
+          }
+        }
+      }
+    } else {
+      // Clean tap gesture (0ms latency, handles tap-to-select and tap-to-move)
+      if (this.dragOriginSquare) {
+        this.handleSquareClick(this.dragOriginSquare);
       }
     }
+
+    this.canDragCurrentPiece = false;
+    this.isTouchDragging = false;
+    this.dragOriginSquare = null;
   }
 
   bindGlobalEvents() {
@@ -299,6 +339,14 @@ class ChessBoardUI {
 
   handleSquareClick(sqName) {
     if (!this.options.interactive) return;
+
+    // Prevent duplicate synthetic click events from iOS Safari touch
+    const now = Date.now();
+    if (this.lastTapSquare === sqName && (now - (this.lastTapTime || 0) < 250)) {
+      return;
+    }
+    this.lastTapSquare = sqName;
+    this.lastTapTime = now;
 
     if (!this.selectedSquare) {
       // First click: select piece if friendly

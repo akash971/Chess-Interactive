@@ -15,6 +15,19 @@ class ChessAudioEngine {
       if (AudioCtx) {
         this.ctx = new AudioCtx();
         this.initialized = true;
+
+        // Auto-unlock Web Audio on first iOS touch/click gesture
+        const unlock = () => {
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+          window.removeEventListener('touchstart', unlock, true);
+          window.removeEventListener('touchend', unlock, true);
+          window.removeEventListener('click', unlock, true);
+        };
+        window.addEventListener('touchstart', unlock, { capture: true, passive: true });
+        window.addEventListener('touchend', unlock, { capture: true, passive: true });
+        window.addEventListener('click', unlock, { capture: true, passive: true });
       }
     } catch (e) {
       console.warn('Web Audio API not supported', e);
