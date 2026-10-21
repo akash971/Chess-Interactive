@@ -169,13 +169,13 @@ class ChessBoardUI {
 
         if (isBottomRank) {
           const fileLetter = document.createElement('span');
-          fileLetter.className = 'absolute right-1 bottom-0.5 text-[11px] font-bold leading-none pointer-events-none select-none opacity-90';
+          fileLetter.className = 'absolute right-0.5 sm:right-1 bottom-0.5 text-[9px] sm:text-[11px] font-bold leading-none pointer-events-none select-none opacity-90';
           fileLetter.textContent = sqName[0];
           squareEl.appendChild(fileLetter);
         }
         if (isLeftFile) {
           const rankNumber = document.createElement('span');
-          rankNumber.className = 'absolute left-1 top-0.5 text-[11px] font-bold leading-none pointer-events-none select-none opacity-90';
+          rankNumber.className = 'absolute left-0.5 sm:left-1 top-0.5 text-[9px] sm:text-[11px] font-bold leading-none pointer-events-none select-none opacity-90';
           rankNumber.textContent = sqName[1];
           squareEl.appendChild(rankNumber);
         }

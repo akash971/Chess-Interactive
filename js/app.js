@@ -444,10 +444,10 @@ class GrandmasterApp {
       this.dom.curriculumHeaderControls.classList.remove('hidden');
 
       // Update Nav Tabs Styling
-      this.dom.modeCurriculumBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white shadow-md shadow-emerald-950 transition-all cursor-pointer';
-      this.dom.modePlayAiBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+      this.dom.modeCurriculumBtn.className = 'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 text-white shadow-md shadow-emerald-950 transition-all cursor-pointer';
+      this.dom.modePlayAiBtn.className = 'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
       if (this.dom.modeAnalysisBtn) {
-        this.dom.modeAnalysisBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+        this.dom.modeAnalysisBtn.className = 'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
       }
 
       // Update header badges
@@ -467,10 +467,10 @@ class GrandmasterApp {
       this.dom.curriculumHeaderControls.classList.add('hidden');
 
       // Update Nav Tabs Styling
-      this.dom.modeCurriculumBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
-      this.dom.modePlayAiBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white shadow-md shadow-emerald-950 transition-all cursor-pointer';
+      this.dom.modeCurriculumBtn.className = 'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+      this.dom.modePlayAiBtn.className = 'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 text-white shadow-md shadow-emerald-950 transition-all cursor-pointer';
       if (this.dom.modeAnalysisBtn) {
-        this.dom.modeAnalysisBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+        this.dom.modeAnalysisBtn.className = 'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
       }
 
       // Update header badges
@@ -491,10 +491,10 @@ class GrandmasterApp {
       this.dom.curriculumHeaderControls.classList.add('hidden');
 
       // Update Nav Tabs Styling
-      this.dom.modeCurriculumBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
-      this.dom.modePlayAiBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+      this.dom.modeCurriculumBtn.className = 'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+      this.dom.modePlayAiBtn.className = 'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
       if (this.dom.modeAnalysisBtn) {
-        this.dom.modeAnalysisBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-purple-600 text-white shadow-md shadow-purple-950 transition-all cursor-pointer';
+        this.dom.modeAnalysisBtn.className = 'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-xs sm:text-sm font-bold bg-purple-600 text-white shadow-md shadow-purple-950 transition-all cursor-pointer';
       }
 
       // Update header badges
