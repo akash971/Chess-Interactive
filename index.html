@@ -115,15 +115,22 @@
         </div>
       </div>
 
-      <!-- Mode Switcher Tabs (Dual-Mode Architecture) -->
-      <nav class="flex items-center bg-slate-950 p-1 rounded-2xl border border-slate-800 shadow-inner" aria-label="Main Navigation">
-        <button id="mode-curriculum-btn" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white shadow-md shadow-emerald-950 transition-all">
+      <!-- Mode Switcher Tabs (3-Mode Architecture) -->
+      <nav class="flex items-center bg-slate-950 p-1 rounded-2xl border border-slate-800 shadow-inner flex-wrap gap-1" aria-label="Main Navigation">
+        <button id="mode-curriculum-btn" class="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 text-white shadow-md shadow-emerald-950 transition-all cursor-pointer">
           <span>🎓</span>
-          <span>Learn Chess (Curriculum)</span>
+          <span class="hidden sm:inline">Learn (Curriculum)</span>
+          <span class="sm:hidden">Learn</span>
         </button>
-        <button id="mode-play-ai-btn" class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all">
+        <button id="mode-play-ai-btn" class="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer">
           <span>🤖</span>
-          <span>Play Chess vs AI & Coach</span>
+          <span class="hidden sm:inline">Play vs AI & Coach</span>
+          <span class="sm:hidden">Vs AI</span>
+        </button>
+        <button id="mode-analysis-btn" class="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer">
+          <span>♟️</span>
+          <span class="hidden sm:inline">Self-Play & AI Coach</span>
+          <span class="sm:hidden">Self-Play</span>
         </button>
       </nav>
 
@@ -152,6 +159,12 @@
             <span class="hidden sm:inline">100 Levels</span>
           </button>
         </div>
+
+        <!-- Piece Theme Selector Button -->
+        <button id="piece-theme-modal-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/90 border border-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white transition-all shadow-sm text-xs font-semibold cursor-pointer" title="Change Chess Piece Visual Style">
+          <span class="text-base select-none">🎨</span>
+          <span class="hidden sm:inline" id="active-piece-theme-name">Pieces: Neo 3D</span>
+        </button>
 
         <!-- Mode Select Modal Opener -->
         <button id="open-welcome-modal-btn" class="p-2 rounded-xl bg-slate-800/90 border border-slate-700/80 hover:bg-slate-700 text-slate-300 hover:text-white transition-all shadow-sm" title="Switch Mode / Welcome Screen">
@@ -555,13 +568,273 @@
 
     </div>
 
+    <!-- ====================================================== -->
+    <!-- VIEW 3: SELF-PLAY SANDBOX & AI COACH (BOTH SIDES CONTROLLED) -->
+    <!-- ====================================================== -->
+    <div id="view-analysis" class="hidden flex flex-col gap-5">
+      
+      <!-- Top Action & Status Bar -->
+      <div class="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-xl flex flex-wrap items-center justify-between gap-4">
+        
+        <!-- Left: Mode Title & Info -->
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-lg">
+            ♟️
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-white uppercase tracking-wider">Analysis Sandbox</span>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                Both Sides Controlled by You
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-400">Freely play White and Black with instant grandmaster AI coach insights</p>
+          </div>
+        </div>
+
+        <!-- Center: Turn & Alert Pill -->
+        <div class="flex items-center gap-3">
+          <div id="analysis-turn-pill" class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-white shadow-sm">
+            <span id="analysis-turn-indicator-dot" class="w-2.5 h-2.5 rounded-full bg-white shadow-sm ring-1 ring-slate-400"></span>
+            <span id="analysis-turn-text">White to move</span>
+          </div>
+
+          <div id="analysis-check-badge" class="hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-xs font-bold text-rose-300 animate-pulse">
+            <span>⚠️ King in Check!</span>
+          </div>
+        </div>
+
+        <!-- Right: Sandbox Controls -->
+        <div class="flex items-center gap-2">
+          <button id="analysis-hint-btn" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-amber-300 hover:text-amber-200 transition-all shadow-sm cursor-pointer" title="Highlight Best Move & Strategic Idea">
+            <span>💡</span>
+            <span>Coach Hint</span>
+          </button>
+          <button id="analysis-undo-btn" class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 hover:text-white transition-all shadow-sm cursor-pointer" title="Take back move">
+            <span>↩ Undo</span>
+          </button>
+          <button id="analysis-flip-btn" class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 hover:text-white transition-all shadow-sm cursor-pointer" title="Flip Board Perspective">
+            <span>🔄 Flip</span>
+          </button>
+          <button id="analysis-load-fen-btn" class="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-slate-300 hover:text-white transition-all shadow-sm cursor-pointer" title="Load FEN or Opening Study">
+            <span>📥 Load Position</span>
+          </button>
+          <button id="analysis-reset-btn" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white transition-all shadow-md shadow-purple-950 cursor-pointer" title="Reset to Start Position">
+            <span>🧹 Reset</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Split Layout: Left AI Coach Chat + Right Chessboard & Notation -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- LEFT HAND SIDE: LIVE AI COACH CONVERSATIONAL PANEL -->
+        <div class="lg:col-span-5 flex flex-col gap-3">
+          
+          <div class="rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl flex flex-col overflow-hidden">
+            
+            <!-- Coach Header -->
+            <div class="p-4 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-500 to-indigo-500 p-0.5 shadow-md shadow-purple-500/20">
+                  <div class="w-full h-full rounded-2xl bg-slate-900 flex items-center justify-center text-lg">
+                    🧙‍♂️
+                  </div>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="font-bold text-sm text-white">Grandmaster Analysis Coach</h3>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                      Gemini 3.8
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-slate-400 flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+                    <span>Self-Play Master Advisor for White & Black</span>
+                  </p>
+                </div>
+              </div>
+              <button id="analysis-coach-clear-btn" class="text-xs text-slate-400 hover:text-slate-200 px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-800 transition-all border border-slate-700/60 cursor-pointer" title="Clear conversation">
+                Clear
+              </button>
+            </div>
+
+            <!-- Conversational Chat Stream -->
+            <div id="analysis-coach-chat-stream" class="h-[460px] overflow-y-auto p-4 space-y-3.5 custom-scrollbar bg-slate-950/40">
+              
+              <!-- Welcome Tutor Message -->
+              <div class="flex items-start gap-3 chat-bubble-enter">
+                <div class="w-8 h-8 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-sm shrink-0">
+                  🧙‍♂️
+                </div>
+                <div class="flex-1 p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-slate-200 shadow-md">
+                  <p class="font-semibold text-purple-400 mb-1">Welcome to your Personal Chess Sandbox!</p>
+                  <p class="leading-relaxed text-slate-300">
+                    You have total control over <strong>both White and Black</strong>! Play any moves, explore deep tactical lines, try custom positions, or see what-if scenarios. Whenever you want advice, click any quick question below or ask me directly!
+                  </p>
+                </div>
+              </div>
+
+              <!-- Typing Indicator Placeholder -->
+              <div id="analysis-coach-typing-bubble" class="hidden flex items-start gap-3">
+                <div class="w-8 h-8 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-sm shrink-0">
+                  🧙‍♂️
+                </div>
+                <div class="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-purple-300 shadow-md flex items-center gap-2">
+                  <span class="flex gap-1">
+                    <span class="w-2 h-2 rounded-full bg-purple-400 animate-bounce"></span>
+                    <span class="w-2 h-2 rounded-full bg-purple-400 animate-bounce [animation-delay:0.15s]"></span>
+                    <span class="w-2 h-2 rounded-full bg-purple-400 animate-bounce [animation-delay:0.3s]"></span>
+                  </span>
+                  <span class="font-medium text-slate-300">Coach is analyzing the live sandbox board...</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Quick Suggestion Action Chips -->
+            <div class="p-3 border-t border-slate-800/80 bg-slate-900/60">
+              <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between">
+                <span>Quick Questions for Coach</span>
+                <span class="text-[10px] text-purple-400">Click to ask</span>
+              </div>
+              <div id="analysis-coach-quick-chips" class="flex flex-wrap gap-1.5">
+                <button class="analysis-coach-chip text-xs px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-purple-600 border border-slate-700/80 hover:border-purple-500 text-slate-300 hover:text-white transition-all font-medium flex items-center gap-1.5 shadow-sm cursor-pointer" data-prompt="What is the best move right now, and why?">
+                  <span>💡</span>
+                  <span>What's the best move?</span>
+                </button>
+                <button class="analysis-coach-chip text-xs px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-purple-600 border border-slate-700/80 hover:border-purple-500 text-slate-300 hover:text-white transition-all font-medium flex items-center gap-1.5 shadow-sm cursor-pointer" data-prompt="Explain this position simply. Who is doing better and why?">
+                  <span>🔍</span>
+                  <span>Who is better?</span>
+                </button>
+                <button class="analysis-coach-chip text-xs px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-purple-600 border border-slate-700/80 hover:border-purple-500 text-slate-300 hover:text-white transition-all font-medium flex items-center gap-1.5 shadow-sm cursor-pointer" data-prompt="What should White's main strategic plan be here?">
+                  <span>⚪</span>
+                  <span>White's best plan</span>
+                </button>
+                <button class="analysis-coach-chip text-xs px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-purple-600 border border-slate-700/80 hover:border-purple-500 text-slate-300 hover:text-white transition-all font-medium flex items-center gap-1.5 shadow-sm cursor-pointer" data-prompt="What should Black's main defensive or counter-attacking plan be here?">
+                  <span>⚫</span>
+                  <span>Black's best plan</span>
+                </button>
+                <button class="analysis-coach-chip text-xs px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-purple-600 border border-slate-700/80 hover:border-purple-500 text-slate-300 hover:text-white transition-all font-medium flex items-center gap-1.5 shadow-sm cursor-pointer" data-prompt="Are there any tactical weaknesses, undefended pieces, or pins on the board?">
+                  <span>⚠️</span>
+                  <span>Spot tactical weaknesses</span>
+                </button>
+                <button class="analysis-coach-chip text-xs px-2.5 py-1.5 rounded-xl bg-slate-800/90 hover:bg-purple-600 border border-slate-700/80 hover:border-purple-500 text-slate-300 hover:text-white transition-all font-medium flex items-center gap-1.5 shadow-sm cursor-pointer" data-prompt="Was the last move played a good move or a mistake? Explain.">
+                  <span>🎯</span>
+                  <span>Was last move good?</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Custom Prompt Input Bar -->
+            <form id="analysis-coach-input-form" class="p-3 border-t border-slate-800 bg-slate-950 flex items-center gap-2">
+              <input type="text" id="analysis-coach-prompt-input" class="flex-1 bg-slate-900 border border-slate-700 text-white placeholder-slate-500 text-xs sm:text-sm rounded-xl px-3.5 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all" placeholder="Ask your coach anything about this position..." autocomplete="off">
+              <button type="submit" id="analysis-coach-send-btn" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-purple-950 transition-all flex items-center gap-1 shrink-0 cursor-pointer">
+                <span>Ask</span>
+                <span>➔</span>
+              </button>
+            </form>
+
+          </div>
+
+        </div>
+
+        <!-- RIGHT HAND SIDE: INTERACTIVE SANDBOX BOARD & NOTATION -->
+        <div class="lg:col-span-7 flex flex-col items-center gap-3">
+          
+          <!-- Black Side Tray Card (Top) -->
+          <div class="w-full max-w-[560px] p-3 rounded-2xl bg-slate-900 border border-slate-800 shadow-md flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-lg">
+                ♟️
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-white">Black Side</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                    Controlled by You
+                  </span>
+                </div>
+                <div id="analysis-black-captured-pieces" class="flex items-center gap-0.5 min-h-[18px] text-xs mt-0.5">
+                  <span class="text-[11px] text-slate-500">No captures yet</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Material Advantage Badge -->
+            <div id="analysis-black-advantage-badge" class="hidden px-2.5 py-1 rounded-lg bg-slate-800 text-xs font-mono font-bold text-slate-300">
+              +0
+            </div>
+          </div>
+
+          <!-- Sandbox Chessboard Container -->
+          <div id="analysis-board-container" class="w-full flex justify-center"></div>
+
+          <!-- White Side Tray Card (Bottom) -->
+          <div class="w-full max-w-[560px] p-3 rounded-2xl bg-slate-900 border border-slate-800 shadow-md flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <div class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-lg text-white">
+                ♙
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-white">White Side</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                    Controlled by You
+                  </span>
+                </div>
+                <div id="analysis-white-captured-pieces" class="flex items-center gap-0.5 min-h-[18px] text-xs mt-0.5">
+                  <span class="text-[11px] text-slate-500">No captures yet</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Material Advantage Badge -->
+            <div id="analysis-white-advantage-badge" class="hidden px-2.5 py-1 rounded-lg bg-emerald-950/70 border border-emerald-500/40 text-xs font-mono font-bold text-emerald-300">
+              +0
+            </div>
+          </div>
+
+          <!-- Move History Log (PGN) & Live Eval Bar -->
+          <div class="w-full max-w-[560px] p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-md">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Move Notation (PGN)</span>
+                <span id="analysis-move-count-badge" class="text-[11px] font-mono text-slate-500">0 moves</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span id="analysis-eval-score-text" class="text-xs font-mono font-bold text-emerald-400">Eval: +0.0</span>
+                <button id="analysis-copy-pgn-btn" class="text-[11px] text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 transition-all cursor-pointer" title="Copy PGN text">
+                  Copy PGN
+                </button>
+              </div>
+            </div>
+
+            <!-- Live Material Gauge Bar -->
+            <div class="w-full h-1.5 rounded-full bg-slate-800 overflow-hidden flex mb-2.5">
+              <div id="analysis-material-gauge-fill" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300 w-1/2"></div>
+            </div>
+
+            <!-- Move List Table -->
+            <div id="analysis-move-list" class="h-28 overflow-y-auto p-2.5 rounded-xl bg-slate-950 border border-slate-800/80 custom-scrollbar space-y-1">
+              <div class="text-xs text-slate-500 italic text-center py-4">No moves yet. Make a move for White to begin!</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
   </main>
 
   <!-- ======================================================== -->
   <!-- DUAL-MODE WELCOME MODAL (FIRST VISIT & MODE SWITCHER) -->
   <!-- ======================================================== -->
   <div id="welcome-modal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative overflow-hidden animate-scaleIn">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full p-6 sm:p-8 shadow-2xl relative overflow-hidden animate-scaleIn">
       
       <!-- Close Button -->
       <button id="close-welcome-modal-btn" class="absolute top-5 right-5 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all">
@@ -581,49 +854,71 @@
         </p>
       </div>
 
-      <!-- Two Mode Choice Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <!-- Three Mode Choice Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         
         <!-- Option 1: Curriculum -->
-        <div id="choose-curriculum-card" class="group relative p-6 rounded-2xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800 hover:border-emerald-500 cursor-pointer transition-all duration-200 transform hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-950/50 flex flex-col justify-between">
+        <div id="choose-curriculum-card" class="group relative p-5 rounded-2xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800 hover:border-emerald-500 cursor-pointer transition-all duration-200 transform hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-950/50 flex flex-col justify-between">
           <div>
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between mb-3">
               <span class="text-3xl group-hover:scale-110 transition-transform">🎓</span>
               <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 101 Levels
               </span>
             </div>
-            <h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors mb-2">
+            <h3 class="text-base font-bold text-white group-hover:text-emerald-400 transition-colors mb-1.5">
               Learn Chess (Curriculum)
             </h3>
             <p class="text-xs text-slate-400 leading-relaxed">
-              Step-by-step master lessons from beginner pawn pushes to Grandmaster coronation. Features visual animations, hints, and interactive drills.
+              Step-by-step master lessons from beginner pawn pushes to Grandmaster coronation with visual animations and drills.
             </p>
           </div>
-          <div class="mt-6 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-emerald-400">
+          <div class="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-emerald-400">
             <span>Start Learning</span>
             <span class="group-hover:translate-x-1 transition-transform">➔</span>
           </div>
         </div>
 
         <!-- Option 2: Play vs AI & AI Coach -->
-        <div id="choose-play-ai-card" class="group relative p-6 rounded-2xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800 hover:border-emerald-500 cursor-pointer transition-all duration-200 transform hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-950/50 flex flex-col justify-between">
+        <div id="choose-play-ai-card" class="group relative p-5 rounded-2xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800 hover:border-emerald-500 cursor-pointer transition-all duration-200 transform hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-950/50 flex flex-col justify-between">
           <div>
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between mb-3">
               <span class="text-3xl group-hover:scale-110 transition-transform">🤖</span>
               <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/20">
-                Gemini 3.8 Powered
+                Vs AI Bot
               </span>
             </div>
-            <h3 class="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors mb-2">
+            <h3 class="text-base font-bold text-white group-hover:text-emerald-400 transition-colors mb-1.5">
               Play Chess vs AI & Coach
             </h3>
             <p class="text-xs text-slate-400 leading-relaxed">
-              Play full matches against Easy, Medium, or Hard bots, with a friendly live conversational AI coach that explains chess reasoning simply for 5th graders.
+              Play full matches against Easy, Medium, or Hard computer bots with friendly live tutoring and feedback.
             </p>
           </div>
-          <div class="mt-6 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-teal-400">
-            <span>Play Match & Coach</span>
+          <div class="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-teal-400">
+            <span>Play Match</span>
+            <span class="group-hover:translate-x-1 transition-transform">➔</span>
+          </div>
+        </div>
+
+        <!-- Option 3: Self-Play & AI Coach -->
+        <div id="choose-analysis-card" class="group relative p-5 rounded-2xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800 hover:border-purple-500 cursor-pointer transition-all duration-200 transform hover:-translate-y-1 hover:shadow-xl hover:shadow-purple-950/50 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-3xl group-hover:scale-110 transition-transform">♟️</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">
+                Both Sides
+              </span>
+            </div>
+            <h3 class="text-base font-bold text-white group-hover:text-purple-400 transition-colors mb-1.5">
+              Self-Play & AI Coach
+            </h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Control both White and Black sides freely. Explore openings, analyze tactical lines, and consult your Grandmaster AI coach.
+            </p>
+          </div>
+          <div class="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-bold text-purple-400">
+            <span>Open Sandbox</span>
             <span class="group-hover:translate-x-1 transition-transform">➔</span>
           </div>
         </div>
@@ -684,6 +979,118 @@
         <!-- Dynamically populated cards -->
       </div>
 
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- PIECE THEME SELECTOR MODAL (MULTI-STYLE SUITE) -->
+  <!-- ======================================================== -->
+  <div id="piece-theme-modal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full p-6 sm:p-7 shadow-2xl relative overflow-hidden animate-scaleIn max-h-[92vh] flex flex-col">
+      
+      <!-- Close Button -->
+      <button id="close-piece-theme-modal-btn" class="absolute top-5 right-5 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer">
+        ✕
+      </button>
+
+      <!-- Modal Header -->
+      <div class="mb-5">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-emerald-500 to-teal-400 flex items-center justify-center text-white text-xl font-bold shadow-lg shadow-emerald-500/20">
+            🎨
+          </div>
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight flex items-center gap-2">
+              <span>Chess Pieces Visual Suite</span>
+              <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                4 Luxury Styles
+              </span>
+            </h2>
+            <p class="text-xs text-slate-400">
+              Select your favorite piece aesthetic. Updates dynamically in real-time across all curriculum lessons, AI match arena, and promotion choices.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Theme Selection Grid -->
+      <div id="piece-theme-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto pr-1 custom-scrollbar">
+        <!-- Dynamically rendered theme cards with live SVG piece previews -->
+      </div>
+
+      <!-- Live Board Preview Strip -->
+      <div class="mt-4 p-3 rounded-2xl bg-slate-950/70 border border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Live Preview:</span>
+          <!-- Sample 4-square mini strip -->
+          <div id="theme-mini-preview-strip" class="inline-flex rounded-lg overflow-hidden border border-slate-700 shadow-md">
+            <!-- Populated dynamically with active theme pieces on light/dark squares -->
+          </div>
+          <span id="theme-active-indicator" class="text-xs font-semibold text-emerald-400">Active: Ultra-Modern 3D Neo</span>
+        </div>
+        <button id="done-piece-theme-btn" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-md shadow-emerald-950 cursor-pointer">
+          Apply & Return
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- LOAD FEN / POSITION MODAL (ANALYSIS SANDBOX) -->
+  <!-- ======================================================== -->
+  <div id="analysis-fen-modal" class="hidden fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl relative overflow-hidden animate-scaleIn">
+      <button id="close-fen-modal-btn" class="absolute top-5 right-5 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all cursor-pointer">
+        ✕
+      </button>
+
+      <div class="flex items-center gap-2.5 mb-3">
+        <span class="text-2xl">📥</span>
+        <div>
+          <h3 class="text-lg font-bold text-white">Load Custom Position (FEN)</h3>
+          <p class="text-xs text-slate-400">Paste any FEN string or pick an opening study to analyze with your coach</p>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label for="fen-input-field" class="block text-xs font-semibold text-slate-300 mb-1.5">FEN String:</label>
+        <input type="text" id="fen-input-field" class="w-full bg-slate-950 border border-slate-700 text-white font-mono text-xs rounded-xl p-3 outline-none focus:ring-2 focus:ring-purple-500" placeholder="e.g. rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1">
+        <p id="fen-error-text" class="hidden text-xs text-rose-400 mt-1 font-medium"></p>
+      </div>
+
+      <div class="mb-5">
+        <label class="block text-xs font-semibold text-slate-400 mb-2">Preset Positions & Openings:</label>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <button class="fen-preset-btn p-2 rounded-xl bg-slate-800/80 hover:bg-purple-600 hover:text-white text-slate-300 text-left transition-all border border-slate-700/60 cursor-pointer" data-fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1">
+            🏁 Starting Position
+          </button>
+          <button class="fen-preset-btn p-2 rounded-xl bg-slate-800/80 hover:bg-purple-600 hover:text-white text-slate-300 text-left transition-all border border-slate-700/60 cursor-pointer" data-fen="r1bqkbnr/pp1ppppp/2n5/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3">
+            🗡️ Sicilian Defense (Open)
+          </button>
+          <button class="fen-preset-btn p-2 rounded-xl bg-slate-800/80 hover:bg-purple-600 hover:text-white text-slate-300 text-left transition-all border border-slate-700/60 cursor-pointer" data-fen="rnbqkbnr/pppp1ppp/4p3/8/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 2">
+            🛡️ French Defense
+          </button>
+          <button class="fen-preset-btn p-2 rounded-xl bg-slate-800/80 hover:bg-purple-600 hover:text-white text-slate-300 text-left transition-all border border-slate-700/60 cursor-pointer" data-fen="rnbqkbnr/ppp1pppp/8/8/2pP4/4P3/PP3PPP/RNBQKBNR b KQkq - 0 3">
+            ⚔️ Queen's Gambit Accepted
+          </button>
+          <button class="fen-preset-btn p-2 rounded-xl bg-slate-800/80 hover:bg-purple-600 hover:text-white text-slate-300 text-left transition-all border border-slate-700/60 cursor-pointer" data-fen="r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5N2/PPPP1PPP/RNBQK2R w KQkq - 0 4">
+            ⚡ Fried Liver Counter
+          </button>
+          <button class="fen-preset-btn p-2 rounded-xl bg-slate-800/80 hover:bg-purple-600 hover:text-white text-slate-300 text-left transition-all border border-slate-700/60 cursor-pointer" data-fen="1K6/1P1k4/8/8/8/8/r7/2R5 w - - 0 1">
+            🏰 Lucena Bridge Endgame
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+        <button id="cancel-fen-btn" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all cursor-pointer">
+          Cancel
+        </button>
+        <button id="apply-fen-btn" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md shadow-purple-950 cursor-pointer">
+          Load Position
+        </button>
+      </div>
     </div>
   </div>
 

@@ -17,7 +17,7 @@ class GrandmasterApp {
     this.userXP = parseInt(localStorage.getItem('gm_user_xp') || '0', 10);
     this.userRating = parseInt(localStorage.getItem('gm_user_rating') || '400', 10);
 
-    // Active dual mode: 'curriculum' or 'play_ai'
+    // Active mode: 'curriculum', 'play_ai', or 'analysis'
     this.activeMode = localStorage.getItem('gm_active_mode') || 'curriculum';
 
     // Curriculum state
@@ -38,6 +38,13 @@ class GrandmasterApp {
     this.isAiThinking = false;
     this.isCoachBusy = false;
 
+    // Self-Play Sandbox & AI Coach state (both White and Black controlled by user)
+    this.analysisChess = new Chess();
+    this.analysisBoard = null;
+    this.analysisMoveHistory = [];
+    this.analysisLastMove = null;
+    this.isAnalysisCoachBusy = false;
+
     // DOM references cache
     this.dom = {};
   }
@@ -47,8 +54,10 @@ class GrandmasterApp {
     this.cacheDOM();
     this.initCurriculumBoard();
     this.initPlayAiBoard();
+    this.initAnalysisBoard();
     this.bindEvents();
     this.updateStatsUI();
+    this.updateActivePieceThemeLabel();
 
     // Check if user is first time visitor; show welcome choice modal
     const hasVisited = localStorage.getItem('gm_has_visited');
@@ -65,6 +74,9 @@ class GrandmasterApp {
 
     // Initial match setup for Play vs AI
     this.startNewPlayMatch();
+
+    // Initial match setup for Analysis Sandbox
+    this.resetAnalysisGame(false);
   }
 
   // Cache all DOM references
@@ -76,6 +88,7 @@ class GrandmasterApp {
       headerSubtitle: document.getElementById('header-subtitle'),
       modeCurriculumBtn: document.getElementById('mode-curriculum-btn'),
       modePlayAiBtn: document.getElementById('mode-play-ai-btn'),
+      modeAnalysisBtn: document.getElementById('mode-analysis-btn'),
       openWelcomeModalBtn: document.getElementById('open-welcome-modal-btn'),
       audioToggleBtn: document.getElementById('audio-toggle-btn'),
       audioIcon: document.getElementById('audio-icon'),
@@ -89,6 +102,7 @@ class GrandmasterApp {
       // Main views
       viewCurriculum: document.getElementById('view-curriculum'),
       viewPlayAi: document.getElementById('view-play-ai'),
+      viewAnalysis: document.getElementById('view-analysis'),
 
       // Curriculum DOM
       curriculumTierBadge: document.getElementById('curriculum-tier-badge'),
@@ -120,7 +134,7 @@ class GrandmasterApp {
       playFlipBtn: document.getElementById('play-flip-btn'),
       playNewGameBtn: document.getElementById('play-new-game-btn'),
 
-      // Gemini AI Coach DOM
+      // Gemini AI Coach DOM (Play vs AI)
       coachChatStream: document.getElementById('coach-chat-stream'),
       coachTypingBubble: document.getElementById('coach-typing-bubble'),
       coachClearChatBtn: document.getElementById('coach-clear-chat-btn'),
@@ -141,11 +155,47 @@ class GrandmasterApp {
       playAiMoveList: document.getElementById('play-ai-move-list'),
       copyPgnBtn: document.getElementById('copy-pgn-btn'),
 
+      // Self-Play Sandbox & AI Coach DOM
+      analysisTurnPill: document.getElementById('analysis-turn-pill'),
+      analysisTurnDot: document.getElementById('analysis-turn-indicator-dot'),
+      analysisTurnText: document.getElementById('analysis-turn-text'),
+      analysisCheckBadge: document.getElementById('analysis-check-badge'),
+      analysisHintBtn: document.getElementById('analysis-hint-btn'),
+      analysisUndoBtn: document.getElementById('analysis-undo-btn'),
+      analysisFlipBtn: document.getElementById('analysis-flip-btn'),
+      analysisLoadFenBtn: document.getElementById('analysis-load-fen-btn'),
+      analysisResetBtn: document.getElementById('analysis-reset-btn'),
+      analysisCoachChatStream: document.getElementById('analysis-coach-chat-stream'),
+      analysisCoachTypingBubble: document.getElementById('analysis-coach-typing-bubble'),
+      analysisCoachClearBtn: document.getElementById('analysis-coach-clear-btn'),
+      analysisCoachQuickChips: document.getElementById('analysis-coach-quick-chips'),
+      analysisCoachInputForm: document.getElementById('analysis-coach-input-form'),
+      analysisCoachPromptInput: document.getElementById('analysis-coach-prompt-input'),
+      analysisCoachSendBtn: document.getElementById('analysis-coach-send-btn'),
+      analysisBlackCapturedPieces: document.getElementById('analysis-black-captured-pieces'),
+      analysisWhiteCapturedPieces: document.getElementById('analysis-white-captured-pieces'),
+      analysisBlackAdvantageBadge: document.getElementById('analysis-black-advantage-badge'),
+      analysisWhiteAdvantageBadge: document.getElementById('analysis-white-advantage-badge'),
+      analysisMoveCountBadge: document.getElementById('analysis-move-count-badge'),
+      analysisEvalScoreText: document.getElementById('analysis-eval-score-text'),
+      analysisCopyPgnBtn: document.getElementById('analysis-copy-pgn-btn'),
+      analysisMaterialGaugeFill: document.getElementById('analysis-material-gauge-fill'),
+      analysisMoveList: document.getElementById('analysis-move-list'),
+
+      // FEN Load Modal DOM
+      analysisFenModal: document.getElementById('analysis-fen-modal'),
+      closeFenModalBtn: document.getElementById('close-fen-modal-btn'),
+      cancelFenBtn: document.getElementById('cancel-fen-btn'),
+      applyFenBtn: document.getElementById('apply-fen-btn'),
+      fenInputField: document.getElementById('fen-input-field'),
+      fenErrorText: document.getElementById('fen-error-text'),
+
       // Welcome Modal DOM
       welcomeModal: document.getElementById('welcome-modal'),
       closeWelcomeModalBtn: document.getElementById('close-welcome-modal-btn'),
       chooseCurriculumCard: document.getElementById('choose-curriculum-card'),
       choosePlayAiCard: document.getElementById('choose-play-ai-card'),
+      chooseAnalysisCard: document.getElementById('choose-analysis-card'),
 
       // Drawer Modal DOM
       levelDrawerModal: document.getElementById('level-drawer-modal'),
@@ -154,6 +204,16 @@ class GrandmasterApp {
       drawerLevelGrid: document.getElementById('drawer-level-grid'),
       drawerUnlockAllBtn: document.getElementById('drawer-unlock-all-btn'),
       drawerResetProgressBtn: document.getElementById('drawer-reset-progress-btn'),
+
+      // Piece Theme Suite DOM
+      pieceThemeModalBtn: document.getElementById('piece-theme-modal-btn'),
+      pieceThemeModal: document.getElementById('piece-theme-modal'),
+      closePieceThemeModalBtn: document.getElementById('close-piece-theme-modal-btn'),
+      donePieceThemeBtn: document.getElementById('done-piece-theme-btn'),
+      pieceThemeGrid: document.getElementById('piece-theme-grid'),
+      activePieceThemeName: document.getElementById('active-piece-theme-name'),
+      themeMiniPreviewStrip: document.getElementById('theme-mini-preview-strip'),
+      themeActiveIndicator: document.getElementById('theme-active-indicator'),
     };
   }
 
@@ -177,11 +237,24 @@ class GrandmasterApp {
     });
   }
 
+  // Initialize Self-Play Sandbox Board UI (Both sides controlled by user)
+  initAnalysisBoard() {
+    this.analysisBoard = new ChessBoardUI('analysis-board-container', {
+      playerColor: 'both',
+      flipped: false,
+      interactive: true,
+      onMove: (moveObj) => this.handleAnalysisMove(moveObj)
+    });
+  }
+
   // Bind global application events
   bindEvents() {
     // Mode switcher buttons in header
     this.dom.modeCurriculumBtn.addEventListener('click', () => this.switchMode('curriculum'));
     this.dom.modePlayAiBtn.addEventListener('click', () => this.switchMode('play_ai'));
+    if (this.dom.modeAnalysisBtn) {
+      this.dom.modeAnalysisBtn.addEventListener('click', () => this.switchMode('analysis'));
+    }
 
     // Welcome modal triggers
     this.dom.brandHomeBtn.addEventListener('click', () => this.openWelcomeModal());
@@ -195,6 +268,12 @@ class GrandmasterApp {
       this.switchMode('play_ai');
       this.closeWelcomeModal();
     });
+    if (this.dom.chooseAnalysisCard) {
+      this.dom.chooseAnalysisCard.addEventListener('click', () => {
+        this.switchMode('analysis');
+        this.closeWelcomeModal();
+      });
+    }
 
     // Audio mute toggle
     this.dom.audioToggleBtn.addEventListener('click', () => {
@@ -231,6 +310,21 @@ class GrandmasterApp {
     this.dom.drawerUnlockAllBtn.addEventListener('click', () => this.unlockAllLevels());
     this.dom.drawerResetProgressBtn.addEventListener('click', () => this.resetAllProgress());
 
+    // Piece Theme Suite Modal Events
+    if (this.dom.pieceThemeModalBtn) {
+      this.dom.pieceThemeModalBtn.addEventListener('click', () => this.openPieceThemeModal());
+    }
+    if (this.dom.closePieceThemeModalBtn) {
+      this.dom.closePieceThemeModalBtn.addEventListener('click', () => this.closePieceThemeModal());
+    }
+    if (this.dom.donePieceThemeBtn) {
+      this.dom.donePieceThemeBtn.addEventListener('click', () => this.closePieceThemeModal());
+    }
+    window.addEventListener('gp:piecethemechange', () => {
+      this.updateActivePieceThemeLabel();
+      this.updateCapturedTraysOnThemeChange();
+    });
+
     // Play vs AI Match Difficulty Buttons
     this.dom.diffEasyBtn.addEventListener('click', () => this.setPlayDifficulty('easy'));
     this.dom.diffMediumBtn.addEventListener('click', () => this.setPlayDifficulty('medium'));
@@ -243,7 +337,7 @@ class GrandmasterApp {
     this.dom.playNewGameBtn.addEventListener('click', () => this.startNewPlayMatch());
     this.dom.copyPgnBtn.addEventListener('click', () => this.copyPlayPgn());
 
-    // Gemini Coach Chat Events
+    // Gemini Coach Chat Events (Play vs AI)
     this.dom.coachInputForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const query = this.dom.coachPromptInput.value.trim();
@@ -253,7 +347,7 @@ class GrandmasterApp {
       }
     });
 
-    // Quick suggestion chips
+    // Quick suggestion chips (Play vs AI)
     this.dom.coachQuickChips.querySelectorAll('.coach-chip').forEach(chip => {
       chip.addEventListener('click', () => {
         const prompt = chip.getAttribute('data-prompt');
@@ -263,12 +357,78 @@ class GrandmasterApp {
       });
     });
 
-    // Clear coach chat
+    // Clear coach chat (Play vs AI)
     this.dom.coachClearChatBtn.addEventListener('click', () => this.clearCoachChat());
+
+    // Self-Play Sandbox & AI Coach Actions
+    if (this.dom.analysisHintBtn) {
+      this.dom.analysisHintBtn.addEventListener('click', () => this.showAnalysisHint());
+    }
+    if (this.dom.analysisUndoBtn) {
+      this.dom.analysisUndoBtn.addEventListener('click', () => this.undoAnalysisMove());
+    }
+    if (this.dom.analysisFlipBtn) {
+      this.dom.analysisFlipBtn.addEventListener('click', () => this.flipAnalysisBoard());
+    }
+    if (this.dom.analysisLoadFenBtn) {
+      this.dom.analysisLoadFenBtn.addEventListener('click', () => this.openAnalysisFenModal());
+    }
+    if (this.dom.analysisResetBtn) {
+      this.dom.analysisResetBtn.addEventListener('click', () => this.resetAnalysisGame(true));
+    }
+    if (this.dom.analysisCopyPgnBtn) {
+      this.dom.analysisCopyPgnBtn.addEventListener('click', () => this.copyAnalysisPgn());
+    }
+
+    // Analysis Coach Chat Events
+    if (this.dom.analysisCoachInputForm) {
+      this.dom.analysisCoachInputForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const query = this.dom.analysisCoachPromptInput.value.trim();
+        if (query) {
+          this.askAnalysisCoach(query);
+          this.dom.analysisCoachPromptInput.value = '';
+        }
+      });
+    }
+    if (this.dom.analysisCoachClearBtn) {
+      this.dom.analysisCoachClearBtn.addEventListener('click', () => this.clearAnalysisCoachChat());
+    }
+    if (this.dom.analysisCoachQuickChips) {
+      this.dom.analysisCoachQuickChips.querySelectorAll('.analysis-coach-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const prompt = chip.getAttribute('data-prompt');
+          if (prompt) {
+            this.askAnalysisCoach(prompt);
+          }
+        });
+      });
+    }
+
+    // Analysis FEN Modal Events
+    if (this.dom.closeFenModalBtn) {
+      this.dom.closeFenModalBtn.addEventListener('click', () => this.closeAnalysisFenModal());
+    }
+    if (this.dom.cancelFenBtn) {
+      this.dom.cancelFenBtn.addEventListener('click', () => this.closeAnalysisFenModal());
+    }
+    if (this.dom.applyFenBtn) {
+      this.dom.applyFenBtn.addEventListener('click', () => this.loadCustomFenFromInput());
+    }
+    document.querySelectorAll('.fen-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const fen = btn.getAttribute('data-fen');
+        if (fen) {
+          if (this.dom.fenInputField) this.dom.fenInputField.value = fen;
+          this.loadAnalysisFen(fen);
+          this.closeAnalysisFenModal();
+        }
+      });
+    });
   }
 
   // ========================================================
-  // DUAL-MODE ARCHITECTURE CONTROLLER
+  // THREE-MODE ARCHITECTURE CONTROLLER
   // ========================================================
 
   switchMode(targetMode) {
@@ -277,14 +437,18 @@ class GrandmasterApp {
     localStorage.setItem('gm_has_visited', 'true');
 
     if (targetMode === 'curriculum') {
-      // Show Curriculum, Hide Play vs AI
+      // Show Curriculum, Hide Play vs AI and Analysis
       this.dom.viewCurriculum.classList.remove('hidden');
       this.dom.viewPlayAi.classList.add('hidden');
+      if (this.dom.viewAnalysis) this.dom.viewAnalysis.classList.add('hidden');
       this.dom.curriculumHeaderControls.classList.remove('hidden');
 
       // Update Nav Tabs Styling
-      this.dom.modeCurriculumBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white shadow-md shadow-emerald-950 transition-all';
-      this.dom.modePlayAiBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all';
+      this.dom.modeCurriculumBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white shadow-md shadow-emerald-950 transition-all cursor-pointer';
+      this.dom.modePlayAiBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+      if (this.dom.modeAnalysisBtn) {
+        this.dom.modeAnalysisBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+      }
 
       // Update header badges
       this.dom.headerModeBadge.textContent = 'Curriculum';
@@ -295,15 +459,19 @@ class GrandmasterApp {
       if (this.curriculumBoard) {
         this.curriculumBoard.setChess(this.curriculumChess);
       }
-    } else {
-      // Show Play vs AI, Hide Curriculum
+    } else if (targetMode === 'play_ai') {
+      // Show Play vs AI, Hide Curriculum and Analysis
       this.dom.viewCurriculum.classList.add('hidden');
       this.dom.viewPlayAi.classList.remove('hidden');
+      if (this.dom.viewAnalysis) this.dom.viewAnalysis.classList.add('hidden');
       this.dom.curriculumHeaderControls.classList.add('hidden');
 
       // Update Nav Tabs Styling
-      this.dom.modeCurriculumBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all';
-      this.dom.modePlayAiBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white shadow-md shadow-emerald-950 transition-all';
+      this.dom.modeCurriculumBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+      this.dom.modePlayAiBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-emerald-600 text-white shadow-md shadow-emerald-950 transition-all cursor-pointer';
+      if (this.dom.modeAnalysisBtn) {
+        this.dom.modeAnalysisBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+      }
 
       // Update header badges
       this.dom.headerModeBadge.textContent = 'Play vs AI & Coach';
@@ -314,6 +482,30 @@ class GrandmasterApp {
       if (this.playBoard) {
         this.playBoard.setChess(this.playChess);
         this.updatePlayArenaUI();
+      }
+    } else {
+      // Show Self-Play Sandbox & AI Coach, Hide others
+      this.dom.viewCurriculum.classList.add('hidden');
+      this.dom.viewPlayAi.classList.add('hidden');
+      if (this.dom.viewAnalysis) this.dom.viewAnalysis.classList.remove('hidden');
+      this.dom.curriculumHeaderControls.classList.add('hidden');
+
+      // Update Nav Tabs Styling
+      this.dom.modeCurriculumBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+      this.dom.modePlayAiBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-slate-400 hover:text-white transition-all cursor-pointer';
+      if (this.dom.modeAnalysisBtn) {
+        this.dom.modeAnalysisBtn.className = 'flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-purple-600 text-white shadow-md shadow-purple-950 transition-all cursor-pointer';
+      }
+
+      // Update header badges
+      this.dom.headerModeBadge.textContent = 'Sandbox & AI Coach';
+      this.dom.headerModeBadge.className = 'text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20';
+      this.dom.headerSubtitle.textContent = 'Two-Player Self-Play Sandbox with Live Gemini AI Coach';
+
+      // Refresh analysis board
+      if (this.analysisBoard) {
+        this.analysisBoard.setChess(this.analysisChess);
+        this.updateAnalysisUI();
       }
     }
   }
@@ -649,17 +841,9 @@ class GrandmasterApp {
       return;
     }
 
-    const symbols = {
-      p: '♟',
-      n: '♞',
-      b: '♝',
-      r: '♜',
-      q: '♛'
-    };
-
     container.innerHTML = pieces.map(p => `
-      <span class="inline-flex items-center justify-center w-5 h-5 text-sm ${color === 'w' ? 'text-slate-100 drop-shadow' : 'text-slate-400'}" title="${color === 'w' ? 'White' : 'Black'} ${p.toUpperCase()}">
-        ${symbols[p] || p}
+      <span class="inline-flex items-center justify-center w-5 h-5 drop-shadow-sm hover:scale-110 transition-transform select-none" title="${color === 'w' ? 'White' : 'Black'} ${p.toUpperCase()}">
+        ${window.ChessPieces ? window.ChessPieces.getSvg(p, color) : p}
       </span>
     `).join('');
   }
@@ -796,6 +980,437 @@ class GrandmasterApp {
       </div>
     `;
     this.dom.coachChatStream.appendChild(this.dom.coachTypingBubble);
+  }
+
+  // ========================================================
+  // SELF-PLAY SANDBOX & AI COACH CONTROLLER (BOTH SIDES)
+  // ========================================================
+
+  handleAnalysisMove(moveObj) {
+    const moveRes = this.analysisChess.move({
+      from: moveObj.from,
+      to: moveObj.to,
+      promotion: moveObj.promotion || 'q'
+    });
+
+    if (!moveRes) {
+      if (this.analysisBoard) this.analysisBoard.shake();
+      this.audio.playError();
+      return;
+    }
+
+    // Audio effects
+    if (moveRes.captured) this.audio.playCapture();
+    else this.audio.playMove();
+    if (this.analysisChess.in_check()) this.audio.playCheck();
+
+    this.analysisLastMove = moveRes;
+    this.analysisMoveHistory.push(moveRes);
+    if (this.analysisBoard) {
+      this.analysisBoard.clearArrows();
+      this.analysisBoard.setChess(this.analysisChess);
+    }
+    this.updateAnalysisUI();
+
+    // Check game over
+    this.checkAnalysisGameOver();
+  }
+
+  checkAnalysisGameOver() {
+    if (this.analysisChess.in_checkmate()) {
+      const winner = this.analysisChess.turn() === 'w' ? 'Black' : 'White';
+      this.audio.playVictory();
+      this.addAnalysisChatMessage({
+        role: 'coach',
+        text: `🎉 **Checkmate!** ${winner} has delivered checkmate on the board! Excellent tactical conclusion. You can click **Undo** to try a different defensive attempt or ask me for a strategic post-mortem.`
+      });
+      return true;
+    }
+
+    if (this.analysisChess.in_draw()) {
+      let reason = 'Draw';
+      if (this.analysisChess.in_stalemate()) reason = 'Stalemate';
+      else if (this.analysisChess.in_threefold_repetition()) reason = 'Threefold Repetition';
+      else if (this.analysisChess.insufficient_material()) reason = 'Insufficient Material';
+
+      this.addAnalysisChatMessage({
+        role: 'coach',
+        text: `🤝 The game is drawn by **${reason}**! A peaceful outcome reached.`
+      });
+      return true;
+    }
+
+    return false;
+  }
+
+  undoAnalysisMove() {
+    if (this.analysisMoveHistory.length === 0) return;
+    this.analysisChess.undo();
+    this.analysisMoveHistory.pop();
+    this.analysisLastMove = this.analysisMoveHistory[this.analysisMoveHistory.length - 1] || null;
+    if (this.analysisBoard) {
+      this.analysisBoard.clearArrows();
+      this.analysisBoard.setChess(this.analysisChess);
+    }
+    this.updateAnalysisUI();
+    this.audio.playMove();
+  }
+
+  flipAnalysisBoard() {
+    if (!this.analysisBoard) return;
+    const isFlipped = !this.analysisBoard.options.flipped;
+    this.analysisBoard.setFlipped(isFlipped);
+    this.audio.playMove();
+  }
+
+  resetAnalysisGame(playSound = true) {
+    this.analysisChess.reset();
+    this.analysisMoveHistory = [];
+    this.analysisLastMove = null;
+    if (this.analysisBoard) {
+      this.analysisBoard.clearArrows();
+      this.analysisBoard.setChess(this.analysisChess);
+    }
+    this.updateAnalysisUI();
+    if (playSound) this.audio.playMove();
+  }
+
+  showAnalysisHint() {
+    if (!this.analysisBoard) return;
+    this.audio.playHint();
+    let best = null;
+    try {
+      best = this.engine.findBestMove(this.analysisChess, 3);
+    } catch (e) {
+      console.warn('Engine hint calculation failed:', e);
+    }
+
+    if (best && best.move) {
+      this.analysisBoard.clearArrows();
+      this.analysisBoard.addArrow(best.move.from, best.move.to, '#a855f7');
+      const turnName = this.analysisChess.turn() === 'w' ? 'White' : 'Black';
+      const pName = this.coach.getPieceName(best.move.piece);
+      this.askAnalysisCoach(`What is the grandmaster idea behind ${turnName} playing ${pName} to ${best.move.to}?`);
+    } else {
+      this.askAnalysisCoach('What is the best tactical move and strategic plan right now?');
+    }
+  }
+
+  openAnalysisFenModal() {
+    if (this.dom.analysisFenModal) {
+      this.dom.analysisFenModal.classList.remove('hidden');
+      if (this.dom.fenInputField) {
+        this.dom.fenInputField.value = this.analysisChess.fen();
+        this.dom.fenInputField.focus();
+      }
+      if (this.dom.fenErrorText) this.dom.fenErrorText.classList.add('hidden');
+    }
+  }
+
+  closeAnalysisFenModal() {
+    if (this.dom.analysisFenModal) {
+      this.dom.analysisFenModal.classList.add('hidden');
+    }
+  }
+
+  loadCustomFenFromInput() {
+    if (!this.dom.fenInputField) return;
+    const fen = this.dom.fenInputField.value.trim();
+    if (!fen) return;
+    const success = this.loadAnalysisFen(fen);
+    if (success) {
+      this.closeAnalysisFenModal();
+    }
+  }
+
+  loadAnalysisFen(fen) {
+    try {
+      const tempChess = new Chess();
+      const valid = tempChess.load(fen);
+      if (!valid) {
+        if (this.dom.fenErrorText) {
+          this.dom.fenErrorText.textContent = 'Invalid FEN format. Please check the notation.';
+          this.dom.fenErrorText.classList.remove('hidden');
+        }
+        this.audio.playError();
+        return false;
+      }
+      this.analysisChess.load(fen);
+      this.analysisMoveHistory = [];
+      this.analysisLastMove = null;
+      if (this.analysisBoard) {
+        this.analysisBoard.clearArrows();
+        this.analysisBoard.setChess(this.analysisChess);
+      }
+      this.updateAnalysisUI();
+      this.audio.playCelebration();
+      this.addAnalysisChatMessage({
+        role: 'coach',
+        text: `📥 **Position Loaded!** Active turn is **${this.analysisChess.turn() === 'w' ? 'White' : 'Black'}**.\n\nYou have total control over both sides from this position. Experiment with different moves and ask me for guidance anytime!`
+      });
+      return true;
+    } catch (e) {
+      if (this.dom.fenErrorText) {
+        this.dom.fenErrorText.textContent = `Error loading position: ${e.message}`;
+        this.dom.fenErrorText.classList.remove('hidden');
+      }
+      this.audio.playError();
+      return false;
+    }
+  }
+
+  updateAnalysisUI() {
+    if (!this.dom.viewAnalysis || !this.analysisChess) return;
+
+    const turn = this.analysisChess.turn();
+    const inCheck = this.analysisChess.in_check();
+
+    // 1. Turn & Check Alert Pill
+    if (this.dom.analysisTurnText) {
+      this.dom.analysisTurnText.textContent = turn === 'w' ? 'White to move' : 'Black to move';
+    }
+    if (this.dom.analysisTurnDot) {
+      if (turn === 'w') {
+        this.dom.analysisTurnDot.className = 'w-2.5 h-2.5 rounded-full bg-white shadow-sm ring-1 ring-slate-400';
+      } else {
+        this.dom.analysisTurnDot.className = 'w-2.5 h-2.5 rounded-full bg-slate-900 shadow-sm ring-1 ring-purple-400';
+      }
+    }
+    if (this.dom.analysisCheckBadge) {
+      if (inCheck) {
+        this.dom.analysisCheckBadge.classList.remove('hidden');
+        this.dom.analysisTurnPill.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-xs font-bold text-rose-300 shadow-sm animate-pulse';
+      } else {
+        this.dom.analysisCheckBadge.classList.add('hidden');
+        this.dom.analysisTurnPill.className = 'flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-xs font-bold text-white shadow-sm';
+      }
+    }
+
+    // 2. Captured Pieces Trays (White captured Black's pieces, Black captured White's pieces)
+    const captured = this.getCapturedPieces(this.analysisChess);
+    if (this.dom.analysisWhiteCapturedPieces) {
+      this.renderCapturedTray(this.dom.analysisWhiteCapturedPieces, captured.b, 'b');
+    }
+    if (this.dom.analysisBlackCapturedPieces) {
+      this.renderCapturedTray(this.dom.analysisBlackCapturedPieces, captured.w, 'w');
+    }
+
+    // 3. Material Balance & Advantage Badges
+    const mat = this.engine.getMaterialBalance(this.analysisChess);
+    const diff = mat.diff; // positive for White advantage, negative for Black advantage
+
+    if (this.dom.analysisWhiteAdvantageBadge) {
+      if (diff > 0) {
+        this.dom.analysisWhiteAdvantageBadge.textContent = `+${diff}`;
+        this.dom.analysisWhiteAdvantageBadge.classList.remove('hidden');
+      } else {
+        this.dom.analysisWhiteAdvantageBadge.classList.add('hidden');
+      }
+    }
+    if (this.dom.analysisBlackAdvantageBadge) {
+      if (diff < 0) {
+        this.dom.analysisBlackAdvantageBadge.textContent = `+${Math.abs(diff)}`;
+        this.dom.analysisBlackAdvantageBadge.classList.remove('hidden');
+      } else {
+        this.dom.analysisBlackAdvantageBadge.classList.add('hidden');
+      }
+    }
+
+    // 4. Material Gauge Bar Fill (diff scaled: -15 to +15 mapped to 0% to 100%)
+    if (this.dom.analysisMaterialGaugeFill) {
+      const clamped = Math.max(-15, Math.min(15, diff));
+      const pct = Math.round(((clamped + 15) / 30) * 100);
+      this.dom.analysisMaterialGaugeFill.style.width = `${pct}%`;
+    }
+
+    // 5. Evaluation Score
+    if (this.dom.analysisEvalScoreText) {
+      const evalScore = (this.engine.evaluate(this.analysisChess) / 100).toFixed(1);
+      const scorePrefix = evalScore > 0 ? `+${evalScore}` : evalScore;
+      this.dom.analysisEvalScoreText.textContent = `Eval: ${scorePrefix}`;
+    }
+
+    // 6. Move notation list
+    const history = this.analysisChess.history({ verbose: true });
+    if (this.dom.analysisMoveCountBadge) {
+      this.dom.analysisMoveCountBadge.textContent = `${history.length} moves`;
+    }
+
+    if (this.dom.analysisMoveList) {
+      if (history.length === 0) {
+        this.dom.analysisMoveList.innerHTML = `<div class="text-xs text-slate-500 italic text-center py-4">No moves yet. Make a move for White to begin!</div>`;
+      } else {
+        this.dom.analysisMoveList.innerHTML = '';
+        for (let i = 0; i < history.length; i += 2) {
+          const moveNum = Math.floor(i / 2) + 1;
+          const whiteMove = history[i] ? history[i].san : '';
+          const blackMove = history[i + 1] ? history[i + 1].san : '';
+          const isLatestWhite = i === history.length - 1;
+          const isLatestBlack = i + 1 === history.length - 1;
+
+          const row = document.createElement('div');
+          row.className = 'grid grid-cols-3 py-1 px-2 text-xs rounded hover:bg-slate-800/60 font-mono transition-colors';
+          row.innerHTML = `
+            <span class="text-slate-500 font-bold">${moveNum}.</span>
+            <span class="${isLatestWhite ? 'text-purple-400 font-bold bg-purple-950/60 px-1 rounded' : 'text-slate-200'}">${whiteMove}</span>
+            <span class="${isLatestBlack ? 'text-purple-400 font-bold bg-purple-950/60 px-1 rounded' : 'text-slate-300'}">${blackMove}</span>
+          `;
+          this.dom.analysisMoveList.appendChild(row);
+        }
+        this.dom.analysisMoveList.scrollTop = this.dom.analysisMoveList.scrollHeight;
+      }
+    }
+  }
+
+  async askAnalysisCoach(userQuery) {
+    if (this.isAnalysisCoachBusy || !userQuery) return;
+
+    this.isAnalysisCoachBusy = true;
+    if (this.dom.analysisCoachPromptInput) this.dom.analysisCoachPromptInput.disabled = true;
+    if (this.dom.analysisCoachSendBtn) this.dom.analysisCoachSendBtn.disabled = true;
+
+    // Append user query to chat feed
+    this.addAnalysisChatMessage({
+      role: 'user',
+      text: userQuery
+    });
+
+    // Show coach typing indicator
+    if (this.dom.analysisCoachTypingBubble) {
+      this.dom.analysisCoachTypingBubble.classList.remove('hidden');
+      if (this.dom.analysisCoachChatStream) {
+        this.dom.analysisCoachChatStream.scrollTop = this.dom.analysisCoachChatStream.scrollHeight;
+      }
+    }
+
+    try {
+      const fen = this.analysisChess.fen();
+      const pgn = this.analysisChess.pgn();
+      const inCheck = this.analysisChess.in_check();
+
+      // Compute engine best move
+      let engineBestMove = null;
+      try {
+        engineBestMove = this.engine.findBestMove(this.analysisChess, 3);
+      } catch (e) {
+        console.warn('Could not compute engine best move in sandbox:', e);
+      }
+
+      // Draw suggestion arrow on analysis board
+      if (engineBestMove && engineBestMove.move && this.analysisBoard) {
+        this.analysisBoard.clearArrows();
+        this.analysisBoard.addArrow(engineBestMove.move.from, engineBestMove.move.to, '#a855f7');
+      }
+
+      const advice = await this.coach.askCoach({
+        fen: fen,
+        pgn: pgn,
+        lastMove: this.analysisLastMove,
+        userQuery: userQuery,
+        difficulty: 'hard',
+        playerColor: 'both', // Both sides controlled: triggers dual-sided self-play prompt
+        inCheck: inCheck,
+        engineBestMove: engineBestMove
+      });
+
+      if (this.dom.analysisCoachTypingBubble) {
+        this.dom.analysisCoachTypingBubble.classList.add('hidden');
+      }
+
+      this.addAnalysisChatMessage({
+        role: 'coach',
+        text: advice
+      });
+      this.audio.playCelebration();
+    } catch (err) {
+      console.error('Analysis coach query failed:', err);
+      if (this.dom.analysisCoachTypingBubble) {
+        this.dom.analysisCoachTypingBubble.classList.add('hidden');
+      }
+
+      let fallbackText = '';
+      const turnName = this.analysisChess.turn() === 'w' ? 'White' : 'Black';
+      let engineBestMove = null;
+      try {
+        engineBestMove = this.engine.findBestMove(this.analysisChess, 2);
+      } catch (e) {}
+
+      if (engineBestMove && engineBestMove.move) {
+        const pName = this.coach.getPieceName(engineBestMove.move.piece);
+        const sq = engineBestMove.move.to;
+        const isCap = Boolean(engineBestMove.move.captured);
+        fallbackText = `For **${turnName}**, the strongest move is **${pName} to ${sq}**, because ${isCap ? 'it captures enemy material and wins tempo!' : 'it controls vital central outposts and builds tactical pressure!'}\n\n* **White Perspective:** Central space and active piece placement dictate the initiative.\n* **Black Perspective:** Solid pawn structure and king safety form the backbone of the counter-attack.\n* **Master Tip:** Look for undefended pieces and open files!`;
+      } else {
+        fallbackText = `In this position, **${turnName}** should prioritize active piece development, king safety, and control over central squares.`;
+      }
+
+      this.addAnalysisChatMessage({
+        role: 'coach',
+        text: fallbackText
+      });
+    } finally {
+      this.isAnalysisCoachBusy = false;
+      if (this.dom.analysisCoachPromptInput) {
+        this.dom.analysisCoachPromptInput.disabled = false;
+        this.dom.analysisCoachPromptInput.focus();
+      }
+      if (this.dom.analysisCoachSendBtn) {
+        this.dom.analysisCoachSendBtn.disabled = false;
+      }
+    }
+  }
+
+  addAnalysisChatMessage({ role, text }) {
+    const isCoach = role === 'coach';
+    const messageEl = document.createElement('div');
+    messageEl.className = `flex items-start gap-3 chat-bubble-enter ${isCoach ? '' : 'flex-row-reverse'}`;
+
+    const formattedContent = isCoach ? this.coach.formatCoachResponse(text) : `<p class="leading-relaxed text-sm text-white">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`;
+
+    messageEl.innerHTML = `
+      <div class="w-8 h-8 rounded-xl ${isCoach ? 'bg-purple-600/20 border border-purple-500/30' : 'bg-indigo-600/30 border border-indigo-500/40'} flex items-center justify-center text-sm shrink-0 shadow-sm">
+        ${isCoach ? '🧙‍♂️' : '👤'}
+      </div>
+      <div class="max-w-[85%] p-3.5 rounded-2xl ${isCoach ? 'bg-slate-900 border border-slate-800 text-slate-200 shadow-md' : 'bg-gradient-to-tr from-purple-700 to-indigo-600 text-white shadow-md'} text-sm">
+        ${formattedContent}
+      </div>
+    `;
+
+    if (this.dom.analysisCoachChatStream && this.dom.analysisCoachTypingBubble) {
+      this.dom.analysisCoachChatStream.insertBefore(messageEl, this.dom.analysisCoachTypingBubble);
+      this.dom.analysisCoachChatStream.scrollTop = this.dom.analysisCoachChatStream.scrollHeight;
+    }
+  }
+
+  clearAnalysisCoachChat() {
+    if (!this.dom.analysisCoachChatStream || !this.dom.analysisCoachTypingBubble) return;
+    this.dom.analysisCoachChatStream.innerHTML = `
+      <div class="flex items-start gap-3 chat-bubble-enter">
+        <div class="w-8 h-8 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-sm shrink-0">
+          🧙‍♂️
+        </div>
+        <div class="flex-1 p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-slate-200 shadow-md">
+          <p class="font-semibold text-purple-400 mb-1">Sandbox Analysis Reset!</p>
+          <p class="leading-relaxed text-slate-300">
+            Ask me anything about your current position, plans for White or Black, or click any question chip below!
+          </p>
+        </div>
+      </div>
+    `;
+    this.dom.analysisCoachChatStream.appendChild(this.dom.analysisCoachTypingBubble);
+  }
+
+  copyAnalysisPgn() {
+    const pgn = this.analysisChess.pgn() || 'No moves played yet';
+    navigator.clipboard.writeText(pgn).then(() => {
+      if (this.dom.analysisCopyPgnBtn) {
+        const orig = this.dom.analysisCopyPgnBtn.textContent;
+        this.dom.analysisCopyPgnBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          this.dom.analysisCopyPgnBtn.textContent = orig;
+        }, 1500);
+      }
+    });
   }
 
   // ========================================================
@@ -1135,6 +1750,140 @@ class GrandmasterApp {
     localStorage.setItem('gm_completed_levels', JSON.stringify(Array.from(this.completedLevels)));
     localStorage.setItem('gm_user_xp', this.userXP.toString());
     localStorage.setItem('gm_user_rating', this.userRating.toString());
+  }
+
+  // ========================================================
+  // PIECE THEME SELECTOR & VISUAL SUITE
+  // ========================================================
+
+  openPieceThemeModal() {
+    this.renderPieceThemeGrid();
+    this.updateThemeMiniPreviewStrip();
+    this.dom.pieceThemeModal.classList.remove('hidden');
+  }
+
+  closePieceThemeModal() {
+    this.dom.pieceThemeModal.classList.add('hidden');
+  }
+
+  renderPieceThemeGrid() {
+    if (!this.dom.pieceThemeGrid || !window.ChessPieces) return;
+    const themes = window.ChessPieces.getThemeList();
+    const currentTheme = window.ChessPieces.currentTheme || 'neo';
+    this.dom.pieceThemeGrid.innerHTML = '';
+
+    themes.forEach(theme => {
+      const isActive = theme.id === currentTheme;
+      const card = document.createElement('div');
+      card.className = `p-4 sm:p-5 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col justify-between ${
+        isActive
+          ? 'bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/40 shadow-xl shadow-emerald-950/50'
+          : 'bg-slate-950/60 hover:bg-slate-950 border-slate-800 hover:border-slate-600 shadow-md hover:shadow-lg'
+      }`;
+
+      // Sample 4 piece previews (White Knight, White Queen, Black Bishop, Black King)
+      const wN = window.ChessPieces.getSvg('n', 'w', theme.id);
+      const wQ = window.ChessPieces.getSvg('q', 'w', theme.id);
+      const bB = window.ChessPieces.getSvg('b', 'b', theme.id);
+      const bK = window.ChessPieces.getSvg('k', 'b', theme.id);
+
+      card.innerHTML = `
+        <div>
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-2">
+              <h3 class="font-extrabold text-base text-white">${theme.name}</h3>
+              <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                isActive ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-400'
+              }">
+                ${theme.badge}
+              </span>
+            </div>
+            ${isActive ? '<span class="text-xs font-bold text-emerald-400 flex items-center gap-1">✓ Active</span>' : ''}
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed mb-4">${theme.desc}</p>
+        </div>
+
+        <div>
+          <!-- Live Preview Showcase -->
+          <div class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-around gap-2 mb-3 shadow-inner">
+            <div class="w-10 h-10 flex items-center justify-center p-0.5 hover:scale-110 transition-transform" title="White Knight">${wN}</div>
+            <div class="w-10 h-10 flex items-center justify-center p-0.5 hover:scale-110 transition-transform" title="White Queen">${wQ}</div>
+            <div class="w-10 h-10 flex items-center justify-center p-0.5 hover:scale-110 transition-transform" title="Black Bishop">${bB}</div>
+            <div class="w-10 h-10 flex items-center justify-center p-0.5 hover:scale-110 transition-transform" title="Black King">${bK}</div>
+          </div>
+
+          <button class="w-full py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            isActive
+              ? 'bg-emerald-600 text-white shadow-md shadow-emerald-950'
+              : 'bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white'
+          }">
+            ${isActive ? '✓ Currently Selected' : 'Choose This Style'}
+          </button>
+        </div>
+      `;
+
+      card.onclick = () => {
+        this.selectPieceTheme(theme.id);
+      };
+
+      this.dom.pieceThemeGrid.appendChild(card);
+    });
+  }
+
+  selectPieceTheme(themeId) {
+    if (!window.ChessPieces) return;
+    const changed = window.ChessPieces.setTheme(themeId);
+    if (changed) {
+      if (this.audio) this.audio.playMove();
+      this.renderPieceThemeGrid();
+      this.updateActivePieceThemeLabel();
+      this.updateThemeMiniPreviewStrip();
+      this.updateCapturedTraysOnThemeChange();
+    }
+  }
+
+  updateActivePieceThemeLabel() {
+    if (!this.dom.activePieceThemeName || !window.ChessPieces) return;
+    const current = window.ChessPieces.currentTheme || 'neo';
+    const catalog = window.ChessPieces.catalog || {};
+    const info = catalog[current];
+    const name = info ? info.name : 'Neo';
+    this.dom.activePieceThemeName.textContent = `Pieces: ${name.split(' ')[0]}`;
+    if (this.dom.themeActiveIndicator) {
+      this.dom.themeActiveIndicator.textContent = `Active: ${name}`;
+    }
+  }
+
+  updateThemeMiniPreviewStrip() {
+    if (!this.dom.themeMiniPreviewStrip || !window.ChessPieces) return;
+    const current = window.ChessPieces.currentTheme || 'neo';
+    const wK = window.ChessPieces.getSvg('k', 'w', current);
+    const bQ = window.ChessPieces.getSvg('q', 'b', current);
+    const wN = window.ChessPieces.getSvg('n', 'w', current);
+    const bR = window.ChessPieces.getSvg('r', 'b', current);
+
+    this.dom.themeMiniPreviewStrip.innerHTML = `
+      <div class="w-8 h-8 bg-[#ebecd0] flex items-center justify-center p-0.5">${wK}</div>
+      <div class="w-8 h-8 bg-[#779952] flex items-center justify-center p-0.5">${bQ}</div>
+      <div class="w-8 h-8 bg-[#ebecd0] flex items-center justify-center p-0.5">${wN}</div>
+      <div class="w-8 h-8 bg-[#779952] flex items-center justify-center p-0.5">${bR}</div>
+    `;
+  }
+
+  updateCapturedTraysOnThemeChange() {
+    if (this.activeMode === 'play_ai' && this.playChess) {
+      const captured = this.getCapturedPieces(this.playChess);
+      this.renderCapturedTray(this.dom.playerCapturedPieces, captured.b, 'b');
+      this.renderCapturedTray(this.dom.botCapturedPieces, captured.w, 'w');
+    } else if (this.activeMode === 'analysis' && this.analysisChess) {
+      const captured = this.getCapturedPieces(this.analysisChess);
+      if (this.dom.analysisWhiteCapturedPieces) {
+        this.renderCapturedTray(this.dom.analysisWhiteCapturedPieces, captured.b, 'b');
+      }
+      if (this.dom.analysisBlackCapturedPieces) {
+        this.renderCapturedTray(this.dom.analysisBlackCapturedPieces, captured.w, 'w');
+      }
+    }
   }
 }
 

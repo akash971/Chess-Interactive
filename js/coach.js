@@ -27,8 +27,9 @@ class GeminiCoach {
     this.isQuerying = true;
 
     const turnDescription = fen.split(' ')[1] === 'w' ? 'White' : 'Black';
-    const playerRole = playerColor === 'w' ? 'White' : 'Black';
-    const opponentRole = playerColor === 'w' ? 'Black' : 'White';
+    const isSelfPlay = playerColor === 'both';
+    const playerRole = isSelfPlay ? `${turnDescription} (Self-Play Analysis - Student Controls Both Sides)` : (playerColor === 'w' ? 'White' : 'Black');
+    const opponentRole = isSelfPlay ? (turnDescription === 'White' ? 'Black' : 'White') : (playerColor === 'w' ? 'Black' : 'White');
 
     let engineMoveAdvice = '';
     let pieceName = 'piece';
@@ -39,7 +40,6 @@ class GeminiCoach {
       pieceName = this.getPieceName(mv.piece);
       targetSquare = mv.to;
       const isCapture = Boolean(mv.captured);
-      const actionVerb = isCapture ? 'Take the piece on' : 'Take your ' + pieceName + ' to';
       engineMoveAdvice = `
 [ENGINE COMPUTED BEST MOVE]
 - Recommended Move: ${mv.san} (Move ${pieceName} from ${mv.from} to ${mv.to}${isCapture ? `, capturing opponent ${this.getPieceName(mv.captured)}` : ''})
@@ -48,12 +48,30 @@ class GeminiCoach {
       `.trim();
     }
 
+    const formatRule = isSelfPlay
+      ? `[ANALYSIS COACH INSTRUCTION]
+The student is analyzing this position controlling BOTH White and Black.
+Provide an insightful, inspiring grandmaster explanation suited for an enthusiastic student.
+- If the question asks for a move, state the recommended move for ${turnDescription} clearly and explain the strategic reason.
+- If asking about the position, evaluate who is better, discuss piece coordination, and give the key plan for both White and Black.
+- Include 2 to 3 clear, punchy bullet points highlighting tactical or positional ideas.`
+      : `[CRITICAL INSTRUCTION - MUST FOLLOW THIS EXACT FORMAT]
+You MUST start your response immediately with this exact phrase structure:
+"Take your ${pieceName} to ${targetSquare}, because [explain the main reason]..."
+(Or "Move your ${pieceName} to ${targetSquare}, because [explain the main reason]...")
+
+Then provide 2 to 3 short, exciting bullet points a 5th grader (10-year-old) will love:
+- Explain what this move achieves (controlling the center, attacking a piece, defending your king, or setting up a tactical discovery)
+- Mention what to watch out for next
+Keep it cheerful, inspiring, and concise!`;
+
     const promptContext = `
 [CHESS POSITION]
+- Mode: ${isSelfPlay ? 'Interactive Sandbox Analysis (User controls both White and Black)' : 'Match vs AI'}
 - Current Board FEN: ${fen}
 - Active Turn: ${turnDescription} to move
-- Student Player: Playing as ${playerRole}
-- Computer Opponent: Playing as ${opponentRole} (Difficulty: ${difficulty})
+- Active Side to Analyze: ${playerRole}
+- Opposing Side: ${opponentRole}
 - In Check: ${inCheck ? 'YES! KING UNDER ATTACK' : 'No'}
 - Last Move Played: ${lastMove ? `${lastMove.color === 'w' ? 'White' : 'Black'} played ${lastMove.san || lastMove.from + '-' + lastMove.to}` : 'Game just started'}
 - Game Moves: ${pgn || 'None'}
@@ -62,15 +80,7 @@ ${engineMoveAdvice}
 [STUDENT QUESTION]
 "${userQuery}"
 
-[CRITICAL INSTRUCTION - MUST FOLLOW THIS EXACT FORMAT]
-You MUST start your response immediately with this exact phrase structure:
-"Take your ${pieceName} to ${targetSquare}, because [explain the main reason]..."
-(Or "Move your ${pieceName} to ${targetSquare}, because [explain the main reason]...")
-
-Then provide 2 to 3 short, exciting bullet points a 5th grader (10-year-old) will love:
-- Explain what this move achieves (controlling the center, attacking a piece, defending your king, or setting up a tactical discovery)
-- Mention what to watch out for next
-Keep it cheerful, inspiring, and concise!
+${formatRule}
     `.trim();
 
     const requestPayload = {

@@ -26,6 +26,13 @@ class ChessBoardUI {
     this.dragElement = null;
 
     this.initDOM();
+
+    // Re-render pieces on visual theme switch
+    if (typeof window !== 'undefined') {
+      window.addEventListener('gp:piecethemechange', () => {
+        if (this.chess) this.render();
+      });
+    }
   }
 
   initDOM() {
@@ -45,6 +52,9 @@ class ChessBoardUI {
             </marker>
             <marker id="arrowhead-blue" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
               <path d="M 0 0 L 8 4 L 0 8 z" fill="#3b82f6" />
+            </marker>
+            <marker id="arrowhead-purple" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
+              <path d="M 0 0 L 8 4 L 0 8 z" fill="#a855f7" />
             </marker>
           </defs>
           <g id="svg-arrows-group"></g>
@@ -130,7 +140,7 @@ class ChessBoardUI {
         const squareEl = document.createElement('div');
         squareEl.dataset.square = sqName;
         squareEl.className = `relative flex items-center justify-center transition-colors duration-150 ${
-          isLight ? 'bg-[#eeeed2] text-[#769656]' : 'bg-[#769656] text-[#eeeed2]'
+          isLight ? 'bg-[#ebecd0] text-[#779952]' : 'bg-[#779952] text-[#ebecd0]'
         }`;
 
         // Last move highlight
@@ -159,13 +169,13 @@ class ChessBoardUI {
 
         if (isBottomRank) {
           const fileLetter = document.createElement('span');
-          fileLetter.className = 'absolute right-1 bottom-0.5 text-[10px] font-bold leading-none pointer-events-none opacity-80';
+          fileLetter.className = 'absolute right-1 bottom-0.5 text-[11px] font-bold leading-none pointer-events-none select-none opacity-90';
           fileLetter.textContent = sqName[0];
           squareEl.appendChild(fileLetter);
         }
         if (isLeftFile) {
           const rankNumber = document.createElement('span');
-          rankNumber.className = 'absolute left-1 top-0.5 text-[10px] font-bold leading-none pointer-events-none opacity-80';
+          rankNumber.className = 'absolute left-1 top-0.5 text-[11px] font-bold leading-none pointer-events-none select-none opacity-90';
           rankNumber.textContent = sqName[1];
           squareEl.appendChild(rankNumber);
         }
@@ -189,7 +199,7 @@ class ChessBoardUI {
         // Render SVG Piece
         if (piece) {
           const pieceContainer = document.createElement('div');
-          pieceContainer.className = 'w-full h-full p-1 cursor-grab active:cursor-grabbing flex items-center justify-center';
+          pieceContainer.className = 'w-full h-full p-1 cursor-grab active:cursor-grabbing flex items-center justify-center transition-transform duration-150 hover:scale-[1.07] select-none';
           pieceContainer.innerHTML = window.ChessPieces.getSvg(piece.type, piece.color);
           pieceContainer.dataset.piece = `${piece.color}${piece.type}`;
           pieceContainer.dataset.square = sqName;
@@ -226,7 +236,7 @@ class ChessBoardUI {
 
     const pieceSvg = window.ChessPieces.getSvg(piece.type, piece.color);
     this.dragGhost = document.createElement('div');
-    this.dragGhost.className = 'fixed pointer-events-none z-50 w-16 h-16 transform -translate-x-1/2 -translate-y-1/2 drop-shadow-2xl';
+    this.dragGhost.className = 'fixed pointer-events-none z-50 w-16 h-16 transform -translate-x-1/2 -translate-y-1/2 drop-shadow-2xl scale-110';
     this.dragGhost.innerHTML = pieceSvg;
     this.dragGhost.style.left = `${clientX}px`;
     this.dragGhost.style.top = `${clientY}px`;
@@ -444,6 +454,7 @@ class ChessBoardUI {
       let markerId = 'arrowhead';
       if (arrow.color.includes('f59e0b') || arrow.color.includes('gold')) markerId = 'arrowhead-gold';
       if (arrow.color.includes('3b82f6') || arrow.color.includes('blue')) markerId = 'arrowhead-blue';
+      if (arrow.color.includes('a855f7') || arrow.color.includes('purple')) markerId = 'arrowhead-purple';
       line.setAttribute('marker-end', `url(#${markerId})`);
 
       this.svgGroup.appendChild(line);
