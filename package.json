@@ -1,0 +1,22 @@
+{
+  "name": "chess-interactive",
+  "version": "1.0.0",
+  "description": "GrandmasterPath - Interactive Chess Application with AI Coach and Curriculum Drills",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "node scripts/build_standalone.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "chess",
+    "ai-coach",
+    "gemini",
+    "curriculum",
+    "interactive-chess"
+  ],
+  "author": "akash971",
+  "license": "MIT"
+}

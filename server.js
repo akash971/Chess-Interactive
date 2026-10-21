@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const MIME_TYPES = {
   '.html': 'text/html',
   '.css': 'text/css',
@@ -35,6 +35,13 @@ loadEnv();
 
 const server = http.createServer((req, res) => {
   const parsedUrl = req.url.split('?')[0];
+
+  // Health Check Endpoint for Render / Cloud Uptime Monitors
+  if (parsedUrl === '/healthz' || parsedUrl === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'healthy', uptime: process.uptime() }));
+    return;
+  }
 
   // API Config Endpoint
   if (parsedUrl === '/api/config') {
@@ -128,6 +135,6 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, () => {
-  console.log(`GrandmasterPath local server running at http://localhost:${PORT}/`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`GrandmasterPath server running on port ${PORT}`);
 });
